@@ -1,0 +1,5 @@
+
+new compilation command to avoid false identification by windows defender:
+try the following and incorporate the above to avoid windows blocking the app:
+=============================================================================
+nuitka --standalone --onefile --windows-console-mode=disable --windows-company-name="Neuropedia" --windows-product-name="Neuropedia_Clinical_Directory" --windows-file-version=2.0.14 --windows-product-version=2.0.14 --windows-file-description="Neuropedia Clinical Directory (©2024 Neuropedia / Developer: Stephen Dias)" --windows-icon-from-ico=NCD.ico --include-data-file=NCD.ico=NCD.ico --include-data-file="ncnc-staff-directory-2cf1ef3956ba.json=ncnc-staff-directory-2cf1ef3956ba.json" --enable-plugin=pyqt6 Neuropedia_Clinical_Directory.py
