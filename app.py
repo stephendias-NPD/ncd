@@ -312,7 +312,7 @@ def main():
     # ==========================================
     st.markdown("""
         <div class="footer">
-            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.14 (Cloud Ready)</p>
+            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.14</p>
         </div>
     """, unsafe_allow_html=True)
 
