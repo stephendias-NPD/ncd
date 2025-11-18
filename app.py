@@ -229,14 +229,13 @@ def apply_custom_css():
             background-color: #e8f5e9 !important; /* Light Green */
         }
         .ag-row-selected .ag-cell, .ag-row-selected .ag-cell p {
-             color: #333333 !important; /* <-- THIS WAS THE TYPO */
+             color: #333333 !important;
         }
         
-        /* === NEW FIX: Hide the Checkbox Column === */
-        /* This forces the user to click the row itself */
-        div[data-testid="stDataFrame"] .ag-header-cell-checkbox,
-        div[data-testid="stDataFrame"] .ag-cell-wrapper .ag-selection-checkbox {
-             display: none !important;
+        /* === Fix for the little selection checkbox === */
+        .ag-row-selected .ag-selection-checkbox span {
+             background-color: #008764 !important;
+             border-color: #008764 !important;
         }
         
         /* ============================================================
@@ -303,7 +302,7 @@ def main():
     # ==========================================
     st.markdown("""
         <div class="footer">
-            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.31</p>
+            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.32</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -356,8 +355,7 @@ def main():
     sensitive_cols = ["Photo", "Contact Number", "Contact (Extn)"]
     display_df = filtered_df.drop(columns=sensitive_cols, errors='ignore')
     
-    # The 'use_checkboxes=False' argument was removed as it was causing a crash.
-    # The CSS in section 9 now hides the checkbox column instead.
+    # This is the stable dataframe call.
     event = st.dataframe(
         display_df,
         width='stretch',
@@ -408,17 +406,5 @@ def main():
     else:
         st.info("👆 Select a clinician from the table above to view their details below.")
 
-<<<<<<< HEAD
-    # ==========================================
-    # SECTION 5: FOOTER
-    # ==========================================
-    st.markdown("""
-        <div class="footer">
-            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.14</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-=======
->>>>>>> ad8c55f (Add custom NCD icon and finalize theme)
 if __name__ == "__main__":
     main()
