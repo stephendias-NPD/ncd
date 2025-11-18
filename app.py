@@ -5,11 +5,11 @@ from google.oauth2.service_account import Credentials
 import os # We need this to check if the local file exists
 
 # --- Page Config ---
-st.set_page_config(page_title="Neuropedia Clinical Directory", page_icon="✅", layout="wide")
+st.set_page_config(page_title="Neuropedia Clinical Directory", page_icon="NCD.ico", layout="wide")
 
 # --- Constants ---
 JSON_KEY_FILE = "ncnc-staff-directory-2cf1ef3956ba.json"
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1UO1RRjt4d1JX7oU43k0PF8AhhTT5pQDhf0VXe4CW1Ws/edit?usp=sharing"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1UO1RRjt4d1JX7oU43k0PF8AhhTT5pQDhf0VXe4CW1Ws/edit?usp sharing"
 
 # --- Helper Functions ---
 
@@ -22,13 +22,12 @@ def connect_to_google_sheets():
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets']
         
-        # 1. (NEW) Try to load from local file FIRST (for your laptop)
+        # 1. Try to load from local file FIRST (for your laptop)
         if os.path.exists(JSON_KEY_FILE):
             creds = Credentials.from_service_account_file(JSON_KEY_FILE, scopes=scopes)
             
-        # 2. (NEW) Fallback to Streamlit Secrets (for Cloud deployment)
+        # 2. Fallback to Streamlit Secrets (for Cloud deployment)
         elif "gcp_service_account" in st.secrets:
-            # Load credentials from the dictionary in Streamlit Secrets
             creds = Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"], 
                 scopes=scopes
@@ -61,14 +60,13 @@ def load_data(sheet):
 def apply_custom_css():
     """
     Applies custom CSS. 
-    THEME: 75% Dark Gray Background.
-    FIX: Uses 'box-shadow' to force visible 1px white borders.
+    THEME: "Clinical White & Green" (Light Mode)
     """
     st.markdown("""
         <style>
-        /* 1. FORCE Main Background Color (75% Dark Gray) */
+        /* 1. Main Background Color (Soft Gray) */
         .stApp {
-            background-color: #404040 !important;
+            background-color: #f5f7fa !important;
         }
         
         /* 2. TEXT COLORS */
@@ -77,62 +75,83 @@ def apply_custom_css():
             color: #008764 !important;
         }
         
-        /* Body Text = White */
-        p, label, .stMarkdown, li, span, div {
-            color: #FFFFFF;
+        /* Body Text = Dark Gray */
+        p, label, .stMarkdown, li, span {
+            color: #333333;
         }
         
-        /* 3. THE EXPANDER FIX (Box Shadow Trick) */
+        /* ============================================================
+           3. THE EXPANDER (Search & Filters Box)
+           ============================================================ */
+        
+        /* The Container Wrapper */
         [data-testid="stExpander"] {
-            box-shadow: 0 0 0 1px white !important; /* 1px White "Border" */
+            border: 1px solid #008764 !important; /* Green Border */
             border-radius: 5px !important;
             background-color: transparent !important;
             overflow: hidden;
             margin-bottom: 20px;
         }
+        
+        /* The Header (Summary) */
         [data-testid="stExpander"] > summary {
-            background-color: #f0f0f0 !important; /* Light Grey Header */
-            color: #008764 !important; /* Green Text */
-            border-bottom: 1px solid white !important;
+            background-color: #e8f5e9 !important; /* Light Green Header */
+            color: #008764 !important; /* Dark Green Text */
+            border-bottom: 1px solid #008764 !important; /* Green divider */
         }
+        
+        /* Force Header Text & Icon to be Green */
         [data-testid="stExpander"] > summary p,
         [data-testid="stExpander"] > summary span,
         [data-testid="stExpander"] > summary svg {
             color: #008764 !important;
             fill: #008764 !important;
         }
+
+        /* The Content Area (Pure White) */
         [data-testid="stExpander"] > div {
-            background-color: #505050 !important; /* Darker Grey Content */
-            color: white !important;
+            background-color: #FFFFFF !important;
+            color: #333333 !important;
         }
         
-        /* 4. INPUT BORDERS (Using Box Shadow) */
+        /* ============================================================
+           4. INPUTS & DROPDOWNS (White Boxes, Gray Border)
+           ============================================================ */
+        
+        /* Target Input Containers */
         div[data-baseweb="input"], 
         div[data-baseweb="select"] > div, 
         div[data-baseweb="base-input"] {
             background-color: #FFFFFF !important;
-            box-shadow: 0 0 0 1px white !important; /* 1px White Border */
-            border: none !important;
+            border: 1px solid #cccccc !important; /* Standard Gray Border */
             border-radius: 4px !important;
         }
+
+        /* Text Color Override (Black text inside white inputs) */
         input, textarea, .stSelectbox div[data-baseweb="select"] div {
             color: #000000 !important;
             -webkit-text-fill-color: #000000 !important;
             caret-color: black !important;
         }
         
-        /* 5. DROPDOWN MENUS */
+        /* ============================================================
+           5. DROPDOWN MENUS
+           ============================================================ */
+        
         div[data-baseweb="popover"], div[data-baseweb="menu"] {
             background-color: #FFFFFF !important;
-            box-shadow: 0 0 0 1px white !important;
+            border: 1px solid #cccccc !important; /* Gray Border */
             border-radius: 4px !important;
         }
+        
         div[data-baseweb="popover"] * {
             color: #000000 !important;
         }
+        
         div[data-baseweb="menu"] li:hover {
             background-color: #f0f0f0 !important;
         }
+        
         div[data-baseweb="menu"] li[aria-selected="true"] {
             background-color: #e8f5e9 !important;
             font-weight: bold;
@@ -141,7 +160,7 @@ def apply_custom_css():
         /* 6. Read-only 'Disabled' Input Boxes */
         div[data-testid="stTextInput"] div[disabled] {
              background-color: #e0e0e0 !important;
-             box-shadow: 0 0 0 1px white !important;
+             border: 1px solid #cccccc !important;
         }
         div[data-testid="stTextInput"] div[disabled] input {
              color: #555555 !important;
@@ -159,18 +178,83 @@ def apply_custom_css():
             text-align: center;
             padding: 10px;
             font-size: 14px;
-            border-top: 1px solid white !important;
+            border-top: 1px solid #008764 !important; /* Match footer bg */
             z-index: 100;
+        }
+        .footer p {
+            color: white !important; /* Force footer text to be white */
         }
         .block-container {
             padding-bottom: 5rem;
         }
         
-        /* 8. Focus States */
+        /* 8. Focus States (Glow Green) */
         div[data-baseweb="input"]:focus-within, 
         div[data-baseweb="select"] > div:focus-within {
-            box-shadow: 0 0 0 2px white !important;
+            border-color: #008764 !important;
+            box-shadow: 0 0 0 1px #008764 !important;
         }
+        
+        /* ============================================================
+           9. THEME COLOR OVERRIDES (DATAFRAME FIXES)
+           ============================================================ */
+
+        /* === Fix for Red MultiSelect Tags === */
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] {
+            background-color: #008764 !important; /* Main Green */
+        }
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] span {
+             color: white !important; /* White Text */
+        }
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] svg {
+             fill: white !important; /* White 'X' icon */
+        }
+        
+        /* === Fix for Dataframe Clickable Row === */
+        .ag-row {
+            cursor: pointer !important;
+        }
+        
+        /* === Fix for Red Dataframe HOVER Highlight === */
+        .ag-row-hover {
+             background-color: #f0f0f0 !important;
+        }
+        .ag-row-hover .ag-cell, .ag-row-hover .ag-cell p {
+            background-color: #f0f0f0 !important;
+            color: #333333 !important;
+        }
+
+        /* === Fix for Red Dataframe SELECTION Highlight === */
+        .ag-row-selected {
+            background-color: #e8f5e9 !important; /* Light Green */
+        }
+        .ag-row-selected .ag-cell, .ag-row-selected .ag-cell p {
+             color: #333333 !important; /* <-- THIS WAS THE TYPO */
+        }
+        
+        /* === NEW FIX: Hide the Checkbox Column === */
+        /* This forces the user to click the row itself */
+        div[data-testid="stDataFrame"] .ag-header-cell-checkbox,
+        div[data-testid="stDataFrame"] .ag-cell-wrapper .ag-selection-checkbox {
+             display: none !important;
+        }
+        
+        /* ============================================================
+           10. DYNAMIC SPECIALTY BOX
+           ============================================================ */
+        .specialty-box {
+            background-color: #FFFFFF !important; /* White background */
+            border: 1px solid #cccccc !important; /* Standard Gray Border */
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 100px; /* Give it a minimum height */
+            width: 100%;
+            color: #333333 !important; /* Standard text color */
+        }
+        .specialty-box p { /* Ensure text inside it is the right color */
+            color: #333333 !important;
+        }
+        
         </style>
     """, unsafe_allow_html=True)
 
@@ -215,6 +299,15 @@ def main():
             search_lang = st.text_input("Languages", placeholder="Search languages...")
 
     # ==========================================
+    # SECTION 5: FOOTER (MOVED UP)
+    # ==========================================
+    st.markdown("""
+        <div class="footer">
+            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.31</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # ==========================================
     # SECTION 2: SECURITY & FILTER LOGIC
     # ==========================================
     
@@ -230,7 +323,7 @@ def main():
 
     if not filters_applied:
         st.info("👋 Please select a location or enter search criteria above to view the staff list.")
-        st.stop() 
+        st.stop() # This stops the script here, but *after* footer is drawn
 
     # Apply filters
     filtered_df = df.copy()
@@ -263,13 +356,15 @@ def main():
     sensitive_cols = ["Photo", "Contact Number", "Contact (Extn)"]
     display_df = filtered_df.drop(columns=sensitive_cols, errors='ignore')
     
+    # The 'use_checkboxes=False' argument was removed as it was causing a crash.
+    # The CSS in section 9 now hides the checkbox column instead.
     event = st.dataframe(
         display_df,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         selection_mode="single-row",
         on_select="rerun",
-        height=300 
+        height=300
     )
 
     # ==========================================
@@ -288,7 +383,7 @@ def main():
             st.markdown("**Photo**")
             photo_url = row.get("Photo", "")
             if photo_url and str(photo_url).startswith("http"):
-                st.image(photo_url, use_container_width=True)
+                st.image(photo_url, width='stretch')
             else:
                 st.warning("No Photo")
 
@@ -303,10 +398,17 @@ def main():
             st.text_input("Age Group", value=row.get("Age Group Seen", ""), disabled=True)
             st.text_input("Languages", value=row.get("Languages Spoken", ""), disabled=True)
             
-        st.text_area("Specialty Areas", value=row.get("Specialty Areas", ""), height=100, disabled=True)
+        # --- THIS IS THE DYNAMIC BOX ---
+        st.markdown("**Specialty Areas**")
+        specialty_text = row.get("Specialty Areas", "N/A")
+        # Replace newlines with <br> for proper HTML rendering
+        specialty_text_html = specialty_text.replace("\n", "<br>")
+        st.markdown(f'<div class="specialty-box">{specialty_text_html}</div>', unsafe_allow_html=True)
+        
     else:
         st.info("👆 Select a clinician from the table above to view their details below.")
 
+<<<<<<< HEAD
     # ==========================================
     # SECTION 5: FOOTER
     # ==========================================
@@ -316,5 +418,7 @@ def main():
         </div>
     """, unsafe_allow_html=True)
 
+=======
+>>>>>>> ad8c55f (Add custom NCD icon and finalize theme)
 if __name__ == "__main__":
     main()

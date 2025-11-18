@@ -1,3 +1,18 @@
+Secrets
+
 ncnc-staff-directory-2cf1ef3956ba.json
-venv/
 .streamlit/secrets.toml
+
+Python Virtual Environment
+
+venv/
+pycache/
+
+--- OLD DESKTOP APP FILES ---
+
+Ignore the old Python script, exe, and assets
+
+Compilation Command.txt
+NCD.png
+Neuropedia_Clinical_Directory.exe
+Neuropedia_Clinical_Directory.py
