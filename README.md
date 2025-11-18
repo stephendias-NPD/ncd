@@ -1,1 +1,1 @@
-This web app is specifically made for Neuropedia Clinical use.
+This Neuropedia Clinical Diretory is an online version of the same offline application, specifically created for Neuropedia staff.
