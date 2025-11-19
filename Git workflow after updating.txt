@@ -1,0 +1,10 @@
+Git workflow after updating 
+
+1).  git add .
+	/Prepares to save the files
+
+2).  git commit -m "Optimize caching and remove deprecation warnings" 
+	/saves the snapshot of what is changed
+
+3).  git push
+	/ sends file to the repository

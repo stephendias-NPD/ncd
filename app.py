@@ -2,258 +2,133 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-import os # We need this to check if the local file exists
+import os
 
 # --- Page Config ---
 st.set_page_config(page_title="Neuropedia Clinical Directory", page_icon="NCD.ico", layout="wide")
 
 # --- Constants ---
 JSON_KEY_FILE = "ncnc-staff-directory-2cf1ef3956ba.json"
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1UO1RRjt4d1JX7oU43k0PF8AhhTT5pQDhf0VXe4CW1Ws/edit?usp sharing"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1UO1RRjt4d1JX7oU43k0PF8AhhTT5pQDhf0VXe4CW1Ws/edit?usp=sharing"
 
 # --- Helper Functions ---
 
 @st.cache_resource
 def connect_to_google_sheets():
     """
-    Connects to Google Sheets using a local JSON file (for testing)
-    or Streamlit Secrets (for Cloud deployment).
+    Connects to Google Sheets.
+    Cached as a resource so we don't re-authenticate on every rerun.
     """
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets']
         
-        # 1. Try to load from local file FIRST (for your laptop)
         if os.path.exists(JSON_KEY_FILE):
             creds = Credentials.from_service_account_file(JSON_KEY_FILE, scopes=scopes)
-            
-        # 2. Fallback to Streamlit Secrets (for Cloud deployment)
         elif "gcp_service_account" in st.secrets:
-            creds = Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"], 
-                scopes=scopes
-            )
-            
-        # 3. If neither is found, stop
+            creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
         else:
             st.error("GCP service account key not found.")
-            st.error("Please add `gcp_service_account` to your Streamlit Secrets.")
             st.stop()
             
         client = gspread.authorize(creds)
-        sheet = client.open_by_url(SPREADSHEET_URL).sheet1
-        return sheet
-        
+        return client
     except Exception as e:
         st.error(f"Connection Error: {e}")
         return None
 
-def load_data(sheet):
-    """Loads data from the sheet into a Pandas DataFrame."""
+@st.cache_data(ttl=600)
+def load_data(_client, sheet_url):
+    """
+    Loads data from the sheet into a Pandas DataFrame.
+    Cached for 600 seconds (10 mins) to prevent hitting Google API limits.
+    """
     try:
+        sheet = _client.open_by_url(sheet_url).sheet1
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
+        
+        # Clean data: Fill NaN with empty strings BEFORE converting to string
+        df = df.fillna("")
         return df.astype(str)
     except Exception as e:
         st.error(f"Data Load Error: {e}")
         return pd.DataFrame()
 
 def apply_custom_css():
-    """
-    Applies custom CSS. 
-    THEME: "Clinical White & Green" (Light Mode)
-    """
     st.markdown("""
         <style>
         /* 1. Main Background Color (Soft Gray) */
-        .stApp {
-            background-color: #f5f7fa !important;
-        }
+        .stApp { background-color: #f5f7fa !important; }
         
         /* 2. TEXT COLORS */
-        /* Headings = Neuropedia Green */
-        h1, h2, h3, h4, strong {
-            color: #008764 !important;
-        }
+        h1, h2, h3, h4, strong { color: #008764 !important; }
+        /* Body Text - The 'div' fix is handled naturally by removing 'div' from the list */
+        p, label, .stMarkdown, li, span { color: #333333; }
         
-        /* Body Text = Dark Gray */
-        p, label, .stMarkdown, li, span {
-            color: #333333;
-        }
-        
-        /* ============================================================
-           3. THE EXPANDER (Search & Filters Box)
-           ============================================================ */
-        
-        /* The Container Wrapper */
+        /* 3. Expander Styling */
         [data-testid="stExpander"] {
-            border: 1px solid #008764 !important; /* Green Border */
+            border: 1px solid #008764 !important;
             border-radius: 5px !important;
             background-color: transparent !important;
-            overflow: hidden;
             margin-bottom: 20px;
         }
-        
-        /* The Header (Summary) */
         [data-testid="stExpander"] > summary {
-            background-color: #e8f5e9 !important; /* Light Green Header */
-            color: #008764 !important; /* Dark Green Text */
-            border-bottom: 1px solid #008764 !important; /* Green divider */
+            background-color: #e8f5e9 !important;
+            color: #008764 !important;
+            border-bottom: 1px solid #008764 !important;
         }
-        
-        /* Force Header Text & Icon to be Green */
         [data-testid="stExpander"] > summary p,
         [data-testid="stExpander"] > summary span,
         [data-testid="stExpander"] > summary svg {
             color: #008764 !important;
             fill: #008764 !important;
         }
-
-        /* The Content Area (Pure White) */
         [data-testid="stExpander"] > div {
             background-color: #FFFFFF !important;
             color: #333333 !important;
         }
         
-        /* ============================================================
-           4. INPUTS & DROPDOWNS (White Boxes, Gray Border)
-           ============================================================ */
-        
-        /* Target Input Containers */
-        div[data-baseweb="input"], 
-        div[data-baseweb="select"] > div, 
-        div[data-baseweb="base-input"] {
+        /* 4. Inputs */
+        div[data-baseweb="input"], div[data-baseweb="select"] > div, div[data-baseweb="base-input"] {
             background-color: #FFFFFF !important;
-            border: 1px solid #cccccc !important; /* Standard Gray Border */
+            border: 1px solid #cccccc !important;
             border-radius: 4px !important;
         }
-
-        /* Text Color Override (Black text inside white inputs) */
         input, textarea, .stSelectbox div[data-baseweb="select"] div {
             color: #000000 !important;
             -webkit-text-fill-color: #000000 !important;
             caret-color: black !important;
         }
-        
-        /* ============================================================
-           5. DROPDOWN MENUS
-           ============================================================ */
-        
-        div[data-baseweb="popover"], div[data-baseweb="menu"] {
-            background-color: #FFFFFF !important;
-            border: 1px solid #cccccc !important; /* Gray Border */
-            border-radius: 4px !important;
-        }
-        
-        div[data-baseweb="popover"] * {
-            color: #000000 !important;
-        }
-        
-        div[data-baseweb="menu"] li:hover {
-            background-color: #f0f0f0 !important;
-        }
-        
-        div[data-baseweb="menu"] li[aria-selected="true"] {
-            background-color: #e8f5e9 !important;
-            font-weight: bold;
-        }
 
-        /* 6. Read-only 'Disabled' Input Boxes */
-        div[data-testid="stTextInput"] div[disabled] {
-             background-color: #e0e0e0 !important;
-             border: 1px solid #cccccc !important;
-        }
-        div[data-testid="stTextInput"] div[disabled] input {
-             color: #555555 !important;
-             -webkit-text-fill-color: #555555 !important;
-        }
-
-        /* 7. Footer Styling */
+        /* 5. Footer */
         .footer {
-            position: fixed;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            background-color: #008764;
-            color: white !important;
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            border-top: 1px solid #008764 !important; /* Match footer bg */
-            z-index: 100;
+            position: fixed; left: 0; bottom: 0; width: 100%;
+            background-color: #008764; color: white !important;
+            text-align: center; padding: 10px; font-size: 14px;
+            border-top: 1px solid #008764 !important; z-index: 100;
         }
-        .footer p {
-            color: white !important; /* Force footer text to be white */
-        }
-        .block-container {
-            padding-bottom: 5rem;
-        }
+        .footer p { color: white !important; margin: 0; }
+        .block-container { padding-bottom: 5rem; }
         
-        /* 8. Focus States (Glow Green) */
-        div[data-baseweb="input"]:focus-within, 
-        div[data-baseweb="select"] > div:focus-within {
-            border-color: #008764 !important;
-            box-shadow: 0 0 0 1px #008764 !important;
-        }
+        /* 9. Dataframe & Tags Fixes */
+        [data-testid="stMultiSelect"] [data-baseweb="tag"] { background-color: #008764 !important; }
+        .ag-row { cursor: pointer !important; }
+        .ag-row-selected { background-color: #e8f5e9 !important; }
+        .ag-row-selected .ag-cell, .ag-row-selected .ag-cell p { color: #333333 !important; }
+        .ag-row-hover { background-color: #f0f0f0 !important; }
+        .ag-row-hover .ag-cell, .ag-row-hover .ag-cell p { background-color: #f0f0f0 !important; color: #333333 !important; }
         
-        /* ============================================================
-           9. THEME COLOR OVERRIDES (DATAFRAME FIXES)
-           ============================================================ */
-
-        /* === Fix for Red MultiSelect Tags === */
-        [data-testid="stMultiSelect"] [data-baseweb="tag"] {
-            background-color: #008764 !important; /* Main Green */
-        }
-        [data-testid="stMultiSelect"] [data-baseweb="tag"] span {
-             color: white !important; /* White Text */
-        }
-        [data-testid="stMultiSelect"] [data-baseweb="tag"] svg {
-             fill: white !important; /* White 'X' icon */
-        }
-        
-        /* === Fix for Dataframe Clickable Row === */
-        .ag-row {
-            cursor: pointer !important;
-        }
-        
-        /* === Fix for Red Dataframe HOVER Highlight === */
-        .ag-row-hover {
-             background-color: #f0f0f0 !important;
-        }
-        .ag-row-hover .ag-cell, .ag-row-hover .ag-cell p {
-            background-color: #f0f0f0 !important;
-            color: #333333 !important;
-        }
-
-        /* === Fix for Red Dataframe SELECTION Highlight === */
-        .ag-row-selected {
-            background-color: #e8f5e9 !important; /* Light Green */
-        }
-        .ag-row-selected .ag-cell, .ag-row-selected .ag-cell p {
-             color: #333333 !important;
-        }
-        
-        /* === Fix for the little selection checkbox === */
-        .ag-row-selected .ag-selection-checkbox span {
-             background-color: #008764 !important;
-             border-color: #008764 !important;
-        }
-        
-        /* ============================================================
-           10. DYNAMIC SPECIALTY BOX
-           ============================================================ */
+        /* 10. Dynamic Specialty Box */
         .specialty-box {
-            background-color: #FFFFFF !important; /* White background */
-            border: 1px solid #cccccc !important; /* Standard Gray Border */
+            background-color: #FFFFFF !important;
+            border: 1px solid #cccccc !important;
             border-radius: 4px;
             padding: 10px;
-            min-height: 100px; /* Give it a minimum height */
+            min-height: 45px;
             width: 100%;
-            color: #333333 !important; /* Standard text color */
-        }
-        .specialty-box p { /* Ensure text inside it is the right color */
             color: #333333 !important;
         }
-        
+        .specialty-box p { color: #333333 !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -261,20 +136,28 @@ def apply_custom_css():
 def main():
     apply_custom_css()
     
+    # Always render footer
+    st.markdown("""
+        <div class="footer">
+            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.4</p>
+        </div>
+    """, unsafe_allow_html=True)
+
     st.title("Neuropedia Clinical Directory")
 
-    # 1. Load Data
-    sheet = connect_to_google_sheets()
-    if not sheet: 
+    # 1. Initialize Connection (Cached Resource)
+    client = connect_to_google_sheets()
+    if not client: 
         st.stop()
     
-    df = load_data(sheet)
+    # 2. Load Data (Cached Data)
+    df = load_data(client, SPREADSHEET_URL)
     if df.empty: 
-        st.warning("No data found.")
+        st.warning("No data found or connection failed.")
         st.stop()
 
     # ==========================================
-    # SECTION 1: TOP FILTERS
+    # SECTION 1: SEARCH & FILTERS
     # ==========================================
     with st.expander("🔍 Search & Filters", expanded=True):
         c1, c2, c3 = st.columns([1, 2, 2])
@@ -288,7 +171,9 @@ def main():
 
         c4, c5, c6, c7 = st.columns(4)
         with c4:
-            age_options = ["All"] + sorted(list(df["Age Group Seen"].unique())) if "Age Group Seen" in df.columns else ["All"]
+            # Get unique values safely, filtering out empty ones
+            valid_ages = [x for x in sorted(df["Age Group Seen"].unique()) if x]
+            age_options = ["All"] + valid_ages
             search_age = st.selectbox("Age Group", age_options)
         with c5:
             search_days = st.text_input("Days Available", placeholder="Search days...")
@@ -296,15 +181,6 @@ def main():
             search_specialty = st.text_input("Specialty Areas", placeholder="Search specialty...")
         with c7:
             search_lang = st.text_input("Languages", placeholder="Search languages...")
-
-    # ==========================================
-    # SECTION 5: FOOTER (MOVED UP)
-    # ==========================================
-    st.markdown("""
-        <div class="footer">
-            <p>Stephen/Khizar © 2025 - Neuropedia | Clinical Directory v2.32</p>
-        </div>
-    """, unsafe_allow_html=True)
 
     # ==========================================
     # SECTION 2: SECURITY & FILTER LOGIC
@@ -322,7 +198,7 @@ def main():
 
     if not filters_applied:
         st.info("👋 Please select a location or enter search criteria above to view the staff list.")
-        st.stop() # This stops the script here, but *after* footer is drawn
+        st.stop() 
 
     # Apply filters
     filtered_df = df.copy()
@@ -348,20 +224,29 @@ def main():
         st.stop()
 
     # ==========================================
-    # SECTION 3: DATA TABLE (Secure View)
+    # SECTION 3: DATA TABLE
     # ==========================================
     st.markdown("### Staff List")
     
     sensitive_cols = ["Photo", "Contact Number", "Contact (Extn)"]
     display_df = filtered_df.drop(columns=sensitive_cols, errors='ignore')
     
-    # This is the stable dataframe call.
+    # Configure columns for better display
+    column_config = {
+        "Clinicians Name": st.column_config.TextColumn("Name", width="medium"),
+        "Role": st.column_config.TextColumn("Role", width="medium"),
+        "Location": st.column_config.TextColumn("Loc", width="small"),
+        "Email Address": st.column_config.TextColumn("Email", width="medium"),
+        "Days Available": st.column_config.TextColumn("Days", width="medium"),
+    }
+
     event = st.dataframe(
         display_df,
-        width='stretch',
+        width='stretch', # FIX 1: Replaced use_container_width=True with width='stretch'
         hide_index=True,
         selection_mode="single-row",
         on_select="rerun",
+        column_config=column_config,
         height=300
     )
 
@@ -373,6 +258,7 @@ def main():
 
     if event.selection and event.selection.rows:
         selected_index = event.selection.rows[0]
+        # Fetch row from filtered_df to get hidden columns (Photo, etc.)
         row = filtered_df.iloc[selected_index]
 
         d_col1, d_col2, d_col3 = st.columns([1, 2, 2])
@@ -380,10 +266,15 @@ def main():
         with d_col1:
             st.markdown("**Photo**")
             photo_url = row.get("Photo", "")
-            if photo_url and str(photo_url).startswith("http"):
-                st.image(photo_url, width='stretch')
+            if photo_url and str(photo_url).strip().lower().startswith("http"):
+                # FIX 2: Removed use_container_width=True to use standard st.image sizing
+                st.image(photo_url) 
             else:
-                st.warning("No Photo")
+                # Placeholder if no photo
+                st.markdown(
+                    f'<div style="background:#eee;height:150px;display:flex;align-items:center;justify-content:center;border-radius:5px;color:#555;">No Photo</div>', 
+                    unsafe_allow_html=True
+                )
 
         with d_col2:
             st.text_input("Name", value=row.get("Clinicians Name", ""), disabled=True)
@@ -396,10 +287,9 @@ def main():
             st.text_input("Age Group", value=row.get("Age Group Seen", ""), disabled=True)
             st.text_input("Languages", value=row.get("Languages Spoken", ""), disabled=True)
             
-        # --- THIS IS THE DYNAMIC BOX ---
         st.markdown("**Specialty Areas**")
         specialty_text = row.get("Specialty Areas", "N/A")
-        # Replace newlines with <br> for proper HTML rendering
+        # Simple clean up
         specialty_text_html = specialty_text.replace("\n", "<br>")
         st.markdown(f'<div class="specialty-box">{specialty_text_html}</div>', unsafe_allow_html=True)
         
